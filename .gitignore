@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.db
+*.sqlite
+models/*.pkl
+.env
+node_modules/
+dist/
+.venv/
+*.log
+airflow/logs/
