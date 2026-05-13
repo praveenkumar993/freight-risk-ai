@@ -107,7 +107,89 @@ result = highway_risk.select(
     "disruption_rate", "avg_congestion"
 ).toPandas()
 
+# Load XGBoost model and re-predict risk scores
+import pickle
+model_path = "models/freight_risk_model.pkl"
+if os.path.exists(model_path):
+    with open(model_path, 'rb') as f:
+        ml_model = pickle.load(f)
+
+    highways = ['NH-44', 'NH-48', 'NH-16', 'NH-275', 'NH-65']
+    features = []
+    for _, row in result.iterrows():
+        features.append({
+            'highway_id': highways.index(row['highway']) if row['highway'] in highways else 0,
+            'rainfall_mm': row['avg_rainfall'],
+            'temp_c': row['avg_temp'],
+            'humidity': 60.0,
+            'wind_kph': 10.0,
+            'congestion_level': row['avg_congestion'],
+            'news_risk_count': 0,
+            'month': datetime.now().month
+        })
+
+    import pandas as pd
+    features_df = pd.DataFrame(features)
+    ml_predictions = ml_model.predict_proba(features_df)[:, 1]
+
+    result['ml_risk_score'] = (ml_predictions * 100).round(2)
+    result['risk_score'] = result['ml_risk_score']
+    result['risk_level'] = result['risk_score'].apply(
+        lambda x: 'HIGH' if x >= 60 else 'MEDIUM' if x >= 35 else 'LOW'
+    )
+    result['recommendation'] = result['risk_level'].apply(
+        lambda x: 'Avoid - high disruption risk' if x == 'HIGH'
+        else 'Use with caution - monitor weather' if x == 'MEDIUM'
+        else 'Safe to use'
+    )
+    print("ML model predictions applied.")
+else:
+    print("Model not found, using formula scores.")
+
 result["updated_at"] = datetime.now().isoformat()
+
+conn = sqlite3.connect("data/freight_risk.db")
+cursor = conn.cursor()
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS highway_predictions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        highway TEXT,
+        risk_score REAL,
+        risk_level TEXT,
+        weather_summary TEXT,
+        recommendation TEXT,
+        avg_rainfall REAL,
+        avg_temp REAL,
+        disruption_rate REAL,
+        avg_congestion REAL,
+        updated_at TEXT
+    )
+''')
+cursor.execute("DROP TABLE IF EXISTS highway_predictions")
+conn.commit()
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS highway_predictions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        highway TEXT,
+        risk_score REAL,
+        ml_risk_score REAL,
+        risk_level TEXT,
+        weather_summary TEXT,
+        recommendation TEXT,
+        avg_rainfall REAL,
+        avg_temp REAL,
+        disruption_rate REAL,
+        avg_congestion REAL,
+        updated_at TEXT
+    )
+''')
+conn.commit()
+result.to_sql("highway_predictions", conn, if_exists="append", index=False)
+conn.close()
+
+print("Risk scores written to SQLite.")
+print(result[["highway", "risk_score", "risk_level", "recommendation"]])
+spark.stop()
 
 conn = sqlite3.connect("data/freight_risk.db")
 cursor = conn.cursor()
