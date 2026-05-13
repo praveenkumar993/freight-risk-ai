@@ -39,11 +39,11 @@ CITIES = {
 }
 
 HIGHWAY_KEYWORDS = {
-    "NH-44":  "NH44 highway flood OR strike OR accident OR landslide India",
-    "NH-48":  "NH48 highway flood OR strike OR accident India",
-    "NH-16":  "NH16 highway flood OR cyclone OR accident Andhra",
-    "NH-275": "NH275 highway flood OR landslide Karnataka Kerala",
-    "NH-65":  "NH65 highway flood OR strike Hyderabad Pune",
+    "NH-44":  "highway flood India",
+    "NH-48":  "highway accident Mumbai Pune",
+    "NH-16":  "highway flood Andhra Pradesh",
+    "NH-275": "highway landslide Karnataka Kerala",
+    "NH-65":  "highway strike Hyderabad",
 }
 
 producer = KafkaProducer(
@@ -54,15 +54,19 @@ producer = KafkaProducer(
 
 def fetch_weather(city, lat, lon):
     try:
-        url = f"http://api.weatherapi.com/v1/current.json?key={WEATHER_API_KEY}&q={lat},{lon}"
+        url = (
+            f"http://api.openweathermap.org/data/2.5/weather?"
+            f"lat={lat}&lon={lon}&appid={WEATHER_API_KEY}&units=metric"
+        )
         res = requests.get(url, timeout=10)
         data = res.json()
+        rain = data.get("rain", {}).get("1h", 0.0)
         return {
-            "rainfall_mm": data["current"].get("precip_mm", 0.0),
-            "temp_c": data["current"].get("temp_c", 30.0),
-            "condition": data["current"]["condition"]["text"],
-            "wind_kph": data["current"].get("wind_kph", 0.0),
-            "humidity": data["current"].get("humidity", 50),
+            "rainfall_mm": rain,
+            "temp_c": data["main"]["temp"],
+            "condition": data["weather"][0]["description"],
+            "wind_kph": data["wind"]["speed"] * 3.6,
+            "humidity": data["main"]["humidity"],
         }
     except Exception as e:
         print(f"Weather API error for {city}: {e}")
@@ -108,14 +112,17 @@ def fetch_news(highway):
     try:
         query = HIGHWAY_KEYWORDS[highway]
         url = (
-            f"https://newsapi.org/v2/everything?"
-            f"q={query}&language=en&sortBy=publishedAt"
-            f"&pageSize=3&apiKey={NEWS_API_KEY}"
+            f"https://newsdata.io/api/1/news?"
+            f"apikey={NEWS_API_KEY}&q={query}"
+            f"&language=en&country=in"
         )
         res = requests.get(url, timeout=10)
         data = res.json()
-        articles = data.get("articles", [])
-        headlines = [a["title"] for a in articles if a.get("title")]
+        articles = data.get("results", [])
+        headlines = [
+            a["title"] for a in articles
+            if a.get("title")
+        ]
         disruption_keywords = [
             "flood", "strike", "accident", "landslide",
             "block", "closed", "delay", "cyclone", "storm"
