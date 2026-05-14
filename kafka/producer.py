@@ -13,39 +13,61 @@ TOMTOM_API_KEY = os.getenv("TOMTOM_API_KEY")
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 
 CITIES = {
-    # NH-44
-    "Delhi":         {"lat": 28.6139, "lon": 77.2090, "highway": "NH-44"},
-    "Nagpur":        {"lat": 21.1458, "lon": 79.0882, "highway": "NH-44"},
-    "Hyderabad":     {"lat": 17.3850, "lon": 78.4867, "highway": "NH-44"},
-    "Bangalore":     {"lat": 12.9716, "lon": 77.5946, "highway": "NH-44"},
-    "Chennai":       {"lat": 13.0827, "lon": 80.2707, "highway": "NH-44"},
-    "Krishnagiri":   {"lat": 12.5186, "lon": 78.2137, "highway": "NH-44"},
-    # NH-48
-    "Mumbai":        {"lat": 19.0760, "lon": 72.8777, "highway": "NH-48"},
-    "Pune":          {"lat": 18.5204, "lon": 73.8567, "highway": "NH-48"},
-    "Hubli":         {"lat": 15.3647, "lon": 75.1240, "highway": "NH-48"},
-    # NH-16
-    "Vijayawada":    {"lat": 16.5062, "lon": 80.6480, "highway": "NH-16"},
-    "Visakhapatnam": {"lat": 17.6868, "lon": 83.2185, "highway": "NH-16"},
-    "Nellore":       {"lat": 14.4426, "lon": 79.9865, "highway": "NH-16"},
-    # NH-275
-    "Mysore":        {"lat": 12.2958, "lon": 76.6394, "highway": "NH-275"},
-    "Coimbatore":    {"lat": 11.0168, "lon": 76.9558, "highway": "NH-275"},
-    "Kochi":         {"lat": 9.9312,  "lon": 76.2673, "highway": "NH-275"},
-    # NH-65
-    "Kurnool":       {"lat": 15.8281, "lon": 78.0373, "highway": "NH-65"},
-    "Solapur":       {"lat": 17.6599, "lon": 75.9064, "highway": "NH-65"},
-    "Hyderabad_65":  {"lat": 17.3850, "lon": 78.4867, "highway": "NH-65"},
+    # NH-44 — Delhi to Chennai
+    "Delhi":            {"lat": 28.6139, "lon": 77.2090, "highway": "NH-44"},
+    "Nagpur":           {"lat": 21.1458, "lon": 79.0882, "highway": "NH-44"},
+    "Hyderabad":        {"lat": 17.3850, "lon": 78.4867, "highway": "NH-44"},
+    "Bangalore":        {"lat": 12.9716, "lon": 77.5946, "highway": "NH-44"},
+    "Chennai":          {"lat": 13.0827, "lon": 80.2707, "highway": "NH-44"},
+    "Krishnagiri":      {"lat": 12.5186, "lon": 78.2137, "highway": "NH-44"},
+    # NH-48 — Delhi to Bangalore
+    "Mumbai":           {"lat": 19.0760, "lon": 72.8777, "highway": "NH-48"},
+    "Pune":             {"lat": 18.5204, "lon": 73.8567, "highway": "NH-48"},
+    "Hubli":            {"lat": 15.3647, "lon": 75.1240, "highway": "NH-48"},
+    # NH-16 — Chennai to Visakhapatnam
+    "Vijayawada":       {"lat": 16.5062, "lon": 80.6480, "highway": "NH-16"},
+    "Visakhapatnam":    {"lat": 17.6868, "lon": 83.2185, "highway": "NH-16"},
+    "Nellore":          {"lat": 14.4426, "lon": 79.9865, "highway": "NH-16"},
+    "Guntur":           {"lat": 16.3067, "lon": 80.4365, "highway": "NH-16"},
+    "Rajahmundry":      {"lat": 17.0005, "lon": 81.8040, "highway": "NH-16"},
+    "Kakinada":         {"lat": 16.9891, "lon": 82.2475, "highway": "NH-16"},
+    # NH-275 — Bangalore to Kochi
+    "Mysore":           {"lat": 12.2958, "lon": 76.6394, "highway": "NH-275"},
+    "Coimbatore":       {"lat": 11.0168, "lon": 76.9558, "highway": "NH-275"},
+    "Kochi":            {"lat":  9.9312, "lon": 76.2673, "highway": "NH-275"},
+    "Thrissur":         {"lat": 10.5276, "lon": 76.2144, "highway": "NH-275"},
+    "Kozhikode":        {"lat": 11.2588, "lon": 75.7804, "highway": "NH-275"},
+    "Thiruvananthapuram":{"lat": 8.5241, "lon": 76.9366, "highway": "NH-275"},
+    # NH-65 — Hyderabad to Pune
+    "Kurnool":          {"lat": 15.8281, "lon": 78.0373, "highway": "NH-65"},
+    "Solapur":          {"lat": 17.6599, "lon": 75.9064, "highway": "NH-65"},
+    "Hyderabad_65":     {"lat": 17.3850, "lon": 78.4867, "highway": "NH-65"},
+    "Warangal":         {"lat": 17.9784, "lon": 79.5941, "highway": "NH-65"},
+    "Nizamabad":        {"lat": 18.6725, "lon": 78.0941, "highway": "NH-65"},
+    # NH-544 — Coimbatore to Chennai (new)
+    "Salem":            {"lat": 11.6643, "lon": 78.1460, "highway": "NH-544"},
+    "Vellore":          {"lat": 12.9165, "lon": 79.1325, "highway": "NH-544"},
+    "Madurai":          {"lat":  9.9252, "lon": 78.1198, "highway": "NH-544"},
+    "Tiruchirappalli":  {"lat": 10.7905, "lon": 78.7047, "highway": "NH-544"},
+    # NH-30 — Andhra interior (new)
+    "Tirupati":         {"lat": 13.6288, "lon": 79.4192, "highway": "NH-30"},
+    "Kadapa":           {"lat": 14.4674, "lon": 78.8241, "highway": "NH-30"},
+    # NH-340 — Karnataka interior (new)
+    "Mangalore":        {"lat": 12.9141, "lon": 74.8560, "highway": "NH-340"},
+    "Davangere":        {"lat": 14.4644, "lon": 75.9218, "highway": "NH-340"},
+    "Belgaum":          {"lat": 15.8497, "lon": 74.4977, "highway": "NH-340"},
 }
 
 HIGHWAY_KEYWORDS = {
-    "NH-44":  "highway flood India",
-    "NH-48":  "highway accident Mumbai Pune",
-    "NH-16":  "highway flood Andhra Pradesh",
+    "NH-44":  "highway flood India south",
+    "NH-48":  "highway accident Mumbai Pune Bangalore",
+    "NH-16":  "highway flood Andhra Pradesh cyclone",
     "NH-275": "highway landslide Karnataka Kerala",
-    "NH-65":  "highway strike Hyderabad",
+    "NH-65":  "highway strike Hyderabad Pune",
+    "NH-544": "highway flood Tamil Nadu Chennai",
+    "NH-30":  "highway accident Andhra Tirupati",
+    "NH-340": "highway flood Karnataka Mangalore",
 }
-
 producer = KafkaProducer(
     bootstrap_servers='localhost:9092',
     value_serializer=lambda v: json.dumps(v).encode('utf-8')

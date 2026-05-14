@@ -4,27 +4,49 @@ from datetime import datetime
 # Each segment: (origin, destination, highway, distance_km)
 HIGHWAY_SEGMENTS = [
     # NH-44
-    ("Delhi",       "Nagpur",       "NH-44", 1090),
-    ("Nagpur",      "Hyderabad",    "NH-44",  500),
-    ("Hyderabad",   "Bangalore",    "NH-44",  570),
-    ("Bangalore",   "Krishnagiri",  "NH-44",   90),
-    ("Krishnagiri", "Chennai",      "NH-44",  260),
+    ("Delhi",           "Nagpur",           "NH-44",  1090),
+    ("Nagpur",          "Hyderabad",        "NH-44",   500),
+    ("Hyderabad",       "Bangalore",        "NH-44",   570),
+    ("Bangalore",       "Krishnagiri",      "NH-44",    90),
+    ("Krishnagiri",     "Chennai",          "NH-44",   260),
     # NH-48
-    ("Mumbai",      "Pune",         "NH-48",  150),
-    ("Pune",        "Hubli",        "NH-48",  480),
-    ("Hubli",       "Bangalore",    "NH-48",  410),
+    ("Mumbai",          "Pune",             "NH-48",   150),
+    ("Pune",            "Hubli",            "NH-48",   480),
+    ("Hubli",           "Bangalore",        "NH-48",   410),
     # NH-16
-    ("Chennai",     "Nellore",      "NH-16",  175),
-    ("Nellore",     "Vijayawada",   "NH-16",  290),
-    ("Vijayawada",  "Visakhapatnam","NH-16",  350),
+    ("Chennai",         "Nellore",          "NH-16",   175),
+    ("Nellore",         "Guntur",           "NH-16",   150),
+    ("Guntur",          "Vijayawada",       "NH-16",    30),
+    ("Vijayawada",      "Rajahmundry",      "NH-16",   160),
+    ("Rajahmundry",     "Kakinada",         "NH-16",    55),
+    ("Kakinada",        "Visakhapatnam",    "NH-16",   165),
     # NH-275
-    ("Bangalore",   "Mysore",       "NH-275", 145),
-    ("Mysore",      "Coimbatore",   "NH-275", 210),
-    ("Coimbatore",  "Kochi",        "NH-275", 190),
+    ("Bangalore",       "Mysore",           "NH-275",  145),
+    ("Mysore",          "Coimbatore",       "NH-275",  210),
+    ("Coimbatore",      "Thrissur",         "NH-275",  160),
+    ("Thrissur",        "Kochi",            "NH-275",   75),
+    ("Kochi",           "Kozhikode",        "NH-275",  210),
+    ("Kozhikode",       "Thiruvananthapuram","NH-275", 380),
     # NH-65
-    ("Hyderabad",   "Kurnool",      "NH-65",  210),
-    ("Kurnool",     "Solapur",      "NH-65",  480),
-    ("Solapur",     "Pune",         "NH-65",  250),
+    ("Hyderabad",       "Warangal",         "NH-65",   140),
+    ("Warangal",        "Nizamabad",        "NH-65",   170),
+    ("Hyderabad",       "Kurnool",          "NH-65",   210),
+    ("Kurnool",         "Solapur",          "NH-65",   480),
+    ("Solapur",         "Pune",             "NH-65",   250),
+    # NH-544
+    ("Chennai",         "Vellore",          "NH-544",  135),
+    ("Vellore",         "Salem",            "NH-544",  160),
+    ("Salem",           "Tiruchirappalli",  "NH-544",  140),
+    ("Tiruchirappalli", "Madurai",          "NH-544",   95),
+    ("Madurai",         "Coimbatore",       "NH-544",  150),
+    # NH-30
+    ("Chennai",         "Tirupati",         "NH-30",   135),
+    ("Tirupati",        "Kadapa",           "NH-30",   130),
+    ("Kadapa",          "Kurnool",          "NH-30",   140),
+    # NH-340
+    ("Belgaum",         "Hubli",            "NH-340",   80),
+    ("Hubli",           "Davangere",        "NH-340",   75),
+    ("Davangere",       "Mangalore",        "NH-340",  280),
 ]
 
 
