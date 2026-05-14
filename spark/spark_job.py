@@ -109,7 +109,7 @@ result = highway_risk.select(
 
 # Load XGBoost model and re-predict risk scores
 import pickle
-model_path = "models/freight_risk_model.pkl"
+model_path = "models/freight_risk_model_v2.pkl"
 if os.path.exists(model_path):
     with open(model_path, 'rb') as f:
         ml_model = pickle.load(f)
@@ -117,15 +117,28 @@ if os.path.exists(model_path):
     highways = ['NH-44', 'NH-48', 'NH-16', 'NH-275', 'NH-65']
     features = []
     for _, row in result.iterrows():
+        highway_id = highways.index(row['highway']) if row['highway'] in highways else 0
+        month = datetime.now().month
+
+        # Seasonal bonus per highway
+        highway_season_bonus = 0.0
+        if row['highway'] == 'NH-44' and month in [6, 7, 8, 9]:
+            highway_season_bonus = 0.3
+        elif row['highway'] == 'NH-16' and month in [10, 11]:
+            highway_season_bonus = 0.4
+        elif row['highway'] == 'NH-275' and month in [6, 7, 8, 9]:
+            highway_season_bonus = 0.2
+
         features.append({
-            'highway_id': highways.index(row['highway']) if row['highway'] in highways else 0,
             'rainfall_mm': row['avg_rainfall'],
             'temp_c': row['avg_temp'],
             'humidity': 60.0,
             'wind_kph': 10.0,
             'congestion_level': row['avg_congestion'],
             'news_risk_count': 0,
-            'month': datetime.now().month
+            'month': month,
+            'highway_id': highway_id,
+            'highway_season_bonus': highway_season_bonus,
         })
 
     import pandas as pd
