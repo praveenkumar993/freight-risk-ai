@@ -174,10 +174,110 @@ def recommend_route(origin, destination):
         )
     }
 
+def recommend_route_with_alternate(origin, destination):
+    risk_scores = get_risk_scores()
+
+    # Route A - normal Dijkstra
+    route_a = dijkstra(origin, destination, risk_scores)
+
+    # Route B - remove Route A primary highway from graph
+    if route_a["found"] and route_a["highways"]:
+        primary_highway = route_a["highways"][0]
+        # Build modified risk scores with primary highway heavily penalized
+        modified_scores = dict(risk_scores)
+        modified_scores[primary_highway] = 999
+        route_b = dijkstra(origin, destination, modified_scores)
+    else:
+        route_b = {"found": False}
+
+    # Get ORS distances for both
+    ors_a = get_route_distance(origin, destination)
+
+    # Build response
+    result = {
+        "origin": origin,
+        "destination": destination,
+        "primary_route": None,
+        "alternate_route": None,
+        "recommendation": ""
+    }
+
+    if route_a["found"]:
+        hw_a = route_a["highways"][0] if route_a["highways"] else "Unknown"
+        score_a = risk_scores.get(hw_a, 0)
+        result["primary_route"] = {
+            "path": route_a["path"],
+            "highways": route_a["highways"],
+            "primary_highway": hw_a,
+            "risk_score": score_a,
+            "risk_level": "HIGH" if score_a >= 60 else "MEDIUM" if score_a >= 35 else "LOW",
+            "distance_km": ors_a["distance_km"] if ors_a else None,
+            "duration_hours": ors_a["duration_hours"] if ors_a else None,
+            "recommendation": (
+                "Avoid - high disruption risk" if score_a >= 60
+                else "Use with caution" if score_a >= 35
+                else "Safe to proceed"
+            )
+        }
+
+    if route_b.get("found"):
+        hw_b = route_b["highways"][0] if route_b["highways"] else "Unknown"
+        # Use modified score not 999
+        score_b = risk_scores.get(hw_b, 0)
+        ors_b = get_route_distance(
+            route_b["path"][0],
+            route_b["path"][-1]
+        )
+        result["alternate_route"] = {
+            "path": route_b["path"],
+            "highways": route_b["highways"],
+            "primary_highway": hw_b,
+            "risk_score": score_b,
+            "risk_level": "HIGH" if score_b >= 60 else "MEDIUM" if score_b >= 35 else "LOW",
+            "distance_km": ors_b["distance_km"] if ors_b else None,
+            "duration_hours": ors_b["duration_hours"] if ors_b else None,
+            "recommendation": (
+                "Avoid - high disruption risk" if score_b >= 60
+                else "Use with caution" if score_b >= 35
+                else "Safe to proceed"
+            )
+        }
+
+    # Overall recommendation
+    if result["primary_route"] and result["alternate_route"]:
+        pr = result["primary_route"]
+        ar = result["alternate_route"]
+        if pr["risk_level"] == "LOW" and ar["risk_level"] == "LOW":
+            result["recommendation"] = (
+                f"Both routes are safe. "
+                f"Route A via {pr['primary_highway']} is faster "
+                f"({pr['duration_hours']}hrs). "
+                f"Route B via {ar['primary_highway']} is "
+                f"{'shorter' if (ar['distance_km'] or 0) < (pr['distance_km'] or 0) else 'longer'} "
+                f"({ar['duration_hours']}hrs)."
+            )
+        elif pr["risk_level"] in ["HIGH", "MEDIUM"]:
+            result["recommendation"] = (
+                f"Route A via {pr['primary_highway']} has {pr['risk_level']} risk. "
+                f"Recommend Route B via {ar['primary_highway']} instead."
+            )
+        else:
+            result["recommendation"] = (
+                f"Route A via {pr['primary_highway']} is safest. "
+                f"Use Route B via {ar['primary_highway']} as backup."
+            )
+    elif result["primary_route"]:
+        result["recommendation"] = (
+            f"Only one route found via {result['primary_route']['primary_highway']}."
+        )
+
+    return result
 
 if __name__ == "__main__":
-    print("Testing Dijkstra router...")
-    result = recommend_route("Delhi", "Chennai")
-    print(result)
-    result2 = recommend_route("Hyderabad", "Kochi")
-    print(result2)
+    import json
+    print("Testing alternate route recommendation...")
+    result = recommend_route_with_alternate("Delhi", "Chennai")
+    print(json.dumps(result, indent=2))
+    print("\n---\n")
+    result2 = recommend_route_with_alternate("Hyderabad", "Kochi")
+    print(json.dumps(result2, indent=2))
