@@ -59,6 +59,17 @@ def explain_highway_risk(highway):
     _, avg_rainfall, avg_temp, avg_congestion, _ = highway_row
     features = build_feature_row(highway, avg_rainfall, avg_temp, avg_congestion)
     df = pd.DataFrame([features])
+    df = df.astype({
+        'rainfall_mm': float,
+        'temp_c': float,
+        'humidity': float,
+        'wind_kph': float,
+        'congestion_level': float,
+        'news_risk_count': float,
+        'month': float,
+        'highway_id': float,
+        'highway_season_bonus': float,
+    })
 
     # SHAP explanation
     explainer = shap.TreeExplainer(model)
