@@ -108,46 +108,60 @@ result = highway_risk.select(
 ).toPandas()
 
 # Load XGBoost model and re-predict risk scores
+# Load ensemble models
 import pickle
-model_path = "models/freight_risk_model_v2.pkl"
-if os.path.exists(model_path):
-    with open(model_path, 'rb') as f:
-        ml_model = pickle.load(f)
+import pandas as pd
 
-    highways = ['NH-44', 'NH-48', 'NH-16', 'NH-275', 'NH-65']
+FEATURES = ['rainfall_mm','temp_c','humidity','congestion_level',
+            'news_risk_count','month','highway_season_bonus']
+
+xgb_path = "models/xgb_model_v3.pkl"
+lgb_path  = "models/lgb_model_v3.pkl"
+rf_path   = "models/rf_model_v3.pkl"
+
+if os.path.exists(xgb_path) and os.path.exists(lgb_path) and os.path.exists(rf_path):
+    with open(xgb_path, 'rb') as f: xgb_model = pickle.load(f)
+    with open(lgb_path, 'rb') as f: lgb_model = pickle.load(f)
+    with open(rf_path,  'rb') as f: rf_model  = pickle.load(f)
+
+    highways_list = ['NH-44','NH-48','NH-16','NH-275','NH-65']
     features = []
-    for _, row in result.iterrows():
-        highway_id = highways.index(row['highway']) if row['highway'] in highways else 0
-        month = datetime.now().month
 
-        # Seasonal bonus per highway
+    for _, row in result.iterrows():
+        month = datetime.now().month
+        highway = row['highway']
         highway_season_bonus = 0.0
-        if row['highway'] == 'NH-44' and month in [6, 7, 8, 9]:
+        if highway == 'NH-44' and month in [6,7,8,9]:
             highway_season_bonus = 0.3
-        elif row['highway'] == 'NH-16' and month in [10, 11]:
+        elif highway == 'NH-16' and month in [10,11]:
             highway_season_bonus = 0.4
-        elif row['highway'] == 'NH-275' and month in [6, 7, 8, 9]:
+        elif highway == 'NH-275' and month in [6,7,8,9]:
             highway_season_bonus = 0.2
 
         features.append({
-            'rainfall_mm': row['avg_rainfall'],
-            'temp_c': row['avg_temp'],
-            'humidity': 60.0,
-            'wind_kph': 10.0,
-            'congestion_level': row['avg_congestion'],
-            'news_risk_count': 0,
-            'month': month,
-            'highway_id': highway_id,
+            'rainfall_mm':          float(row['avg_rainfall'] or 0.0),
+            'temp_c':               float(row['avg_temp'] or 30.0),
+            'humidity':             60.0,
+            'congestion_level':     float(row['avg_congestion'] or 0.0),
+            'news_risk_count':      0,
+            'month':                month,
             'highway_season_bonus': highway_season_bonus,
         })
 
-    import pandas as pd
-    features_df = pd.DataFrame(features)
-    ml_predictions = ml_model.predict_proba(features_df)[:, 1]
+    features_df = pd.DataFrame(features)[FEATURES]
 
-    result['ml_risk_score'] = (ml_predictions * 100).round(2)
-    result['risk_score'] = result['ml_risk_score']
-    result['risk_level'] = result['risk_score'].apply(
+    xgb_proba = xgb_model.predict_proba(features_df)[:,1]
+    lgb_proba = lgb_model.predict_proba(features_df)[:,1]
+    rf_proba  = rf_model.predict_proba(features_df)[:,1]
+
+    ensemble_proba = (xgb_proba * 0.5 + lgb_proba * 0.3 + rf_proba * 0.2)
+
+    result['xgb_score']      = (xgb_proba * 100).round(2)
+    result['lgb_score']      = (lgb_proba * 100).round(2)
+    result['rf_score']       = (rf_proba  * 100).round(2)
+    result['ml_risk_score']  = (ensemble_proba * 100).round(2)
+    result['risk_score']     = result['ml_risk_score']
+    result['risk_level']     = result['risk_score'].apply(
         lambda x: 'HIGH' if x >= 60 else 'MEDIUM' if x >= 35 else 'LOW'
     )
     result['recommendation'] = result['risk_level'].apply(
@@ -155,9 +169,10 @@ if os.path.exists(model_path):
         else 'Use with caution - monitor weather' if x == 'MEDIUM'
         else 'Safe to use'
     )
-    print("ML model predictions applied.")
+    print("Ensemble model predictions applied.")
+    print(f"XGB: {xgb_proba.mean():.3f} | LGB: {lgb_proba.mean():.3f} | RF: {rf_proba.mean():.3f}")
 else:
-    print("Model not found, using formula scores.")
+    print("Ensemble models not found. Using formula scores.")
 
 result["updated_at"] = datetime.now().isoformat()
 
@@ -181,11 +196,14 @@ cursor.execute('''
 cursor.execute("DROP TABLE IF EXISTS highway_predictions")
 conn.commit()
 cursor.execute('''
-    CREATE TABLE IF NOT EXISTS highway_predictions (
+    CREATE TABLE highway_predictions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         highway TEXT,
         risk_score REAL,
         ml_risk_score REAL,
+        xgb_score REAL,
+        lgb_score REAL,
+        rf_score REAL,
         risk_level TEXT,
         weather_summary TEXT,
         recommendation TEXT,
@@ -223,6 +241,11 @@ cursor.execute('''
 ''')
 cursor.execute("DELETE FROM highway_predictions")
 conn.commit()
+# Fix NaN values before saving
+result['avg_temp'] = result['avg_temp'].fillna(30.0)
+result['avg_congestion'] = result['avg_congestion'].fillna(0.0)
+result['avg_rainfall'] = result['avg_rainfall'].fillna(0.0)
+result['disruption_rate'] = result['disruption_rate'].fillna(0.0)
 result.to_sql("highway_predictions", conn, if_exists="append", index=False)
 conn.close()
 

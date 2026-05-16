@@ -3,10 +3,11 @@ import shap
 import pandas as pd
 import sqlite3
 from datetime import datetime
+import numpy as np
 
 
 def load_model():
-    with open("models/freight_risk_model_v2.pkl", "rb") as f:
+    with open("models/xgb_model_v3.pkl", "rb") as f:
         return pickle.load(f)
 
 
@@ -14,40 +15,42 @@ def get_highway_features():
     conn = sqlite3.connect("data/freight_risk.db")
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT highway, avg_rainfall, avg_temp,
-               avg_congestion, updated_at
+        SELECT highway,
+               COALESCE(avg_rainfall, 0.0),
+               COALESCE(avg_temp, 30.0),
+               COALESCE(avg_congestion, 0.0),
+               updated_at
         FROM highway_predictions
     """)
     rows = cursor.fetchall()
     conn.close()
     return rows
-
+FEATURES = ['rainfall_mm','temp_c','humidity','congestion_level',
+            'news_risk_count','month','highway_season_bonus']
 
 def build_feature_row(highway, avg_rainfall, avg_temp, avg_congestion):
-    highways = ['NH-44', 'NH-48', 'NH-16', 'NH-275', 'NH-65']
     month = datetime.now().month
+    avg_rainfall   = float(avg_rainfall)   if avg_rainfall   and str(avg_rainfall)   != 'nan' else 0.0
+    avg_temp       = float(avg_temp)       if avg_temp       and str(avg_temp)       != 'nan' else 30.0
+    avg_congestion = float(avg_congestion) if avg_congestion and str(avg_congestion) != 'nan' else 0.0
 
     highway_season_bonus = 0.0
-    if highway == 'NH-44' and month in [6, 7, 8, 9]:
+    if highway == 'NH-44' and month in [6,7,8,9]:
         highway_season_bonus = 0.3
-    elif highway == 'NH-16' and month in [10, 11]:
+    elif highway == 'NH-16' and month in [10,11]:
         highway_season_bonus = 0.4
-    elif highway == 'NH-275' and month in [6, 7, 8, 9]:
+    elif highway == 'NH-275' and month in [6,7,8,9]:
         highway_season_bonus = 0.2
 
     return {
-        'rainfall_mm':        avg_rainfall,
-        'temp_c':             avg_temp,
-        'humidity':           60.0,
-        'wind_kph':           10.0,
-        'congestion_level':   avg_congestion,
-        'news_risk_count':    0,
-        'month':              month,
-        'highway_id':         highways.index(highway) if highway in highways else 0,
+        'rainfall_mm':          avg_rainfall,
+        'temp_c':               avg_temp,
+        'humidity':             60.0,
+        'congestion_level':     avg_congestion,
+        'news_risk_count':      0,
+        'month':                month,
         'highway_season_bonus': highway_season_bonus,
     }
-
-
 def explain_highway_risk(highway):
     model = load_model()
     rows = get_highway_features()
@@ -58,18 +61,8 @@ def explain_highway_risk(highway):
 
     _, avg_rainfall, avg_temp, avg_congestion, _ = highway_row
     features = build_feature_row(highway, avg_rainfall, avg_temp, avg_congestion)
-    df = pd.DataFrame([features])
-    df = df.astype({
-        'rainfall_mm': float,
-        'temp_c': float,
-        'humidity': float,
-        'wind_kph': float,
-        'congestion_level': float,
-        'news_risk_count': float,
-        'month': float,
-        'highway_id': float,
-        'highway_season_bonus': float,
-    })
+    df = pd.DataFrame([features])[FEATURES]
+    df = df.astype(float)
 
     # SHAP explanation
     explainer = shap.TreeExplainer(model)
@@ -94,7 +87,21 @@ def explain_highway_risk(highway):
     # Sort by absolute impact
     explanation.sort(key=lambda x: abs(x["impact"]), reverse=True)
 
-    risk_score = round(float(model.predict_proba(df)[0][1]) * 100, 2)
+    proba = float(model.predict_proba(df)[0][1])
+    risk_score = round(proba * 100, 2)
+
+    # Confidence interval using prediction entropy
+    try:
+        p = proba
+        entropy = -p * np.log(p + 1e-9) - (1-p) * np.log(1-p + 1e-9)
+        confidence_margin = round(float(entropy) * 30, 2)
+        ci_lower = round(max(0, risk_score - confidence_margin), 2)
+        ci_upper = round(min(100, risk_score + confidence_margin), 2)
+    except Exception:
+        confidence_margin = 5.0
+        ci_lower = round(max(0, risk_score - 5), 2)
+        ci_upper = round(min(100, risk_score + 5), 2)
+
     risk_level = "HIGH" if risk_score >= 60 else "MEDIUM" if risk_score >= 35 else "LOW"
 
     # Human readable summary
@@ -120,11 +127,15 @@ def explain_highway_risk(highway):
         summary = f"{highway} is currently {risk_level} risk with no major disruption factors."
 
     return {
-        "highway":     highway,
-        "risk_score":  risk_score,
-        "risk_level":  risk_level,
-        "summary":     summary,
-        "explanation": explanation[:5],
+        "highway":           highway,
+        "risk_score":        risk_score,
+        "ci_lower":          ci_lower,
+        "ci_upper":          ci_upper,
+        "confidence_margin": confidence_margin,
+        "risk_display":      f"{risk_score} ± {confidence_margin}",
+        "risk_level":        risk_level,
+        "summary":           summary,
+        "explanation":       explanation[:5],
     }
 
 

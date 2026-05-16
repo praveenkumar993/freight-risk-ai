@@ -4,6 +4,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 ORS_API_KEY = os.getenv("ORS_API_KEY")
+def get_risk_scores():
+    import sqlite3
+    conn = sqlite3.connect("data/freight_risk.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT highway, risk_score FROM highway_predictions")
+    scores = {row[0]: row[1] for row in cursor.fetchall()}
+    conn.close()
+    return scores
 
 # Highway graph — nodes are cities, edges are (city1, city2, distance_km, highway)
 HIGHWAY_GRAPH = {
@@ -58,58 +66,90 @@ HIGHWAY_GRAPH = {
     "Belgaum":           [("Hubli", 80, "NH-340")],
 }
 
-def get_risk_scores():
+def get_segment_scores():
     import sqlite3
     conn = sqlite3.connect("data/freight_risk.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT highway, risk_score FROM highway_predictions")
-    scores = {row[0]: row[1] for row in cursor.fetchall()}
+    cursor.execute("""
+        SELECT origin, destination, highway, risk_score
+        FROM segment_scores
+    """)
+    rows = cursor.fetchall()
     conn.close()
+    # Build lookup: (origin, destination) -> risk_score
+    scores = {}
+    for origin, dest, hw, score in rows:
+        scores[(origin, dest)] = score
+        scores[(dest, origin)] = score  # bidirectional
     return scores
+
 
 def dijkstra(origin, destination, risk_scores):
     import heapq
 
-    # Cost = distance * risk_weight
-    # risk_weight: LOW=1.0, MEDIUM=1.5, HIGH=2.5
-    def risk_weight(highway):
-        score = risk_scores.get(highway, 25.0)
-        if score >= 60:
-            return 2.5
-        elif score >= 35:
-            return 1.5
-        return 1.0
+    segment_scores = get_segment_scores()
 
-    queue = [(0, origin, [], [])]
+    def edge_weight(node, neighbor, highway, distance):
+        # Use segment score if available, else highway score
+        seg_score = segment_scores.get((node, neighbor))
+        if seg_score is None:
+            seg_score = risk_scores.get(highway, 25.0)
+
+        # Risk weight multiplier
+        if seg_score >= 60:
+            risk_mult = 2.5
+        elif seg_score >= 35:
+            risk_mult = 1.5
+        else:
+            risk_mult = 1.0
+
+        return distance * risk_mult
+
+    queue = [(0, origin, [], [], [])]
     visited = set()
 
     while queue:
-        cost, node, path, highways_used = heapq.heappop(queue)
+        cost, node, path, highways_used, seg_details = heapq.heappop(queue)
 
         if node in visited:
             continue
         visited.add(node)
-
         path = path + [node]
 
         if node == destination:
             return {
-                "path": path,
-                "highways": list(dict.fromkeys(highways_used)),
-                "total_cost": round(cost, 2),
-                "found": True
+                "path":         path,
+                "highways":     list(dict.fromkeys(highways_used)),
+                "total_cost":   round(cost, 2),
+                "seg_details":  seg_details,
+                "found":        True
             }
 
         for neighbor, distance, highway in HIGHWAY_GRAPH.get(node, []):
             if neighbor not in visited:
-                weight = distance * risk_weight(highway)
-                heapq.heappush(
-                    queue,
-                    (cost + weight, neighbor, path, highways_used + [highway])
+                w = edge_weight(node, neighbor, highway, distance)
+                seg_risk = segment_scores.get(
+                    (node, neighbor),
+                    risk_scores.get(highway, 0)
                 )
+                heapq.heappush(queue, (
+                    cost + w,
+                    neighbor,
+                    path,
+                    highways_used + [highway],
+                    seg_details + [{
+                        "from":       node,
+                        "to":         neighbor,
+                        "highway":    highway,
+                        "distance_km":distance,
+                        "seg_risk":   round(seg_risk, 2)
+                    }]
+                ))
 
-    return {"path": [], "highways": [], "total_cost": 0, "found": False}
-
+    return {
+        "path": [], "highways": [],
+        "total_cost": 0, "seg_details": [], "found": False
+    }
 
 def get_route_distance(origin, destination):
     try:
@@ -248,13 +288,14 @@ def recommend_route_with_alternate(origin, destination):
         hw_a = route_a["highways"][0] if route_a["highways"] else "Unknown"
         score_a = risk_scores.get(hw_a, 0)
         result["primary_route"] = {
-            "path": route_a["path"],
-            "highways": route_a["highways"],
-            "primary_highway": hw_a,
-            "risk_score": score_a,
-            "risk_level": "HIGH" if score_a >= 60 else "MEDIUM" if score_a >= 35 else "LOW",
-            "distance_km": ors_a["distance_km"] if ors_a else None,
-            "duration_hours": ors_a["duration_hours"] if ors_a else None,
+            "path":             route_a["path"],
+            "highways":         route_a["highways"],
+            "primary_highway":  hw_a,
+            "risk_score":       score_a,
+            "risk_level":       "HIGH" if score_a >= 60 else "MEDIUM" if score_a >= 35 else "LOW",
+            "distance_km":      ors_a["distance_km"] if ors_a else None,
+            "duration_hours":   ors_a["duration_hours"] if ors_a else None,
+            "seg_details":      route_a.get("seg_details", []),
             "recommendation": (
                 "Avoid - high disruption risk" if score_a >= 60
                 else "Use with caution" if score_a >= 35
