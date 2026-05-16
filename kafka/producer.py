@@ -74,31 +74,70 @@ producer = KafkaProducer(
 )
 
 
-def fetch_weather(city, lat, lon):
+def fetch_weather(city, lat, lon, forecast_date=None):
     try:
+        if forecast_date:
+            # 5-day forecast endpoint
+            url = (
+                f"http://api.openweathermap.org/data/2.5/forecast?"
+                f"lat={lat}&lon={lon}&appid={WEATHER_API_KEY}&units=metric"
+            )
+            res  = requests.get(url, timeout=10)
+            data = res.json()
+            forecasts = data.get("list", [])
+
+            # Find forecast closest to requested date
+            from datetime import datetime as dt
+            target = dt.strptime(forecast_date, "%Y-%m-%d")
+            best   = None
+            best_diff = float('inf')
+
+            for f in forecasts:
+                f_time = dt.fromtimestamp(f["dt"])
+                diff   = abs((f_time.date() - target.date()).days)
+                if diff < best_diff:
+                    best_diff = diff
+                    best = f
+
+            if best:
+                return {
+                    "rainfall_mm": best.get("rain", {}).get("3h", 0.0),
+                    "temp_c":      best["main"]["temp"],
+                    "condition":   best["weather"][0]["description"],
+                    "wind_kph":    best["wind"]["speed"] * 3.6,
+                    "humidity":    best["main"]["humidity"],
+                    "is_forecast": True,
+                    "forecast_for":str(target.date()),
+                }
+
+        # Current weather (default)
         url = (
             f"http://api.openweathermap.org/data/2.5/weather?"
             f"lat={lat}&lon={lon}&appid={WEATHER_API_KEY}&units=metric"
         )
-        res = requests.get(url, timeout=10)
+        res  = requests.get(url, timeout=10)
         data = res.json()
-        rain = data.get("rain", {}).get("1h", 0.0)
         return {
-            "rainfall_mm": rain,
-            "temp_c": data["main"]["temp"],
-            "condition": data["weather"][0]["description"],
-            "wind_kph": data["wind"]["speed"] * 3.6,
-            "humidity": data["main"]["humidity"],
+            "rainfall_mm": data.get("rain", {}).get("1h", 0.0),
+            "temp_c":      data["main"]["temp"],
+            "condition":   data["weather"][0]["description"],
+            "wind_kph":    data["wind"]["speed"] * 3.6,
+            "humidity":    data["main"]["humidity"],
+            "is_forecast": False,
+            "forecast_for": None,
         }
     except Exception as e:
         print(f"Weather API error for {city}: {e}")
         return {
             "rainfall_mm": 0.0,
-            "temp_c": 30.0,
-            "condition": "Unknown",
-            "wind_kph": 0.0,
-            "humidity": 50,
+            "temp_c":      30.0,
+            "condition":   "Unknown",
+            "wind_kph":    0.0,
+            "humidity":    50,
+            "is_forecast": False,
+            "forecast_for": None,
         }
+    
 
 
 def fetch_tomtom_traffic(highway, lat, lon):
@@ -162,17 +201,22 @@ def fetch_news(highway):
         return {"headlines": [], "news_risk_count": 0}
 
 
-def produce_events():
+def produce_events(forecast_date=None):
     print(f"Starting data ingestion at {datetime.now()}")
+    if forecast_date:
+        print(f"Fetching FORECAST data for: {forecast_date}")
+    else:
+        print("Fetching CURRENT weather data")
+
     news_cache = {}
 
     for city, info in CITIES.items():
         highway = info["highway"]
-        lat = info["lat"]
-        lon = info["lon"]
+        lat     = info["lat"]
+        lon     = info["lon"]
 
         print(f"Fetching weather for {city} ({highway})...")
-        weather = fetch_weather(city, lat, lon)
+        weather = fetch_weather(city, lat, lon, forecast_date)
 
         print(f"Fetching traffic for {highway}...")
         traffic = fetch_tomtom_traffic(highway, lat, lon)
@@ -192,28 +236,31 @@ def produce_events():
             event_type = "congestion"
 
         event = {
-            "highway": highway,
-            "city": city,
-            "lat": lat,
-            "lon": lon,
-            "date": datetime.now().strftime("%Y-%m-%d"),
-            "timestamp": datetime.now().isoformat(),
-            "rainfall_mm": weather["rainfall_mm"],
-            "temp_c": weather["temp_c"],
-            "condition": weather["condition"],
-            "wind_kph": weather["wind_kph"],
-            "humidity": weather["humidity"],
-            "current_speed_kph": traffic["current_speed_kph"],
-            "free_flow_speed_kph": traffic["free_flow_speed_kph"],
-            "congestion_level": traffic["congestion_level"],
-            "news_risk_count": news["news_risk_count"],
-            "headlines": news["headlines"],
-            "event_type": event_type,
-            "disruption": 1 if event_type != "clear" else 0,
+            "highway":              highway,
+            "city":                 city,
+            "lat":                  lat,
+            "lon":                  lon,
+            "date":                 forecast_date or datetime.now().strftime("%Y-%m-%d"),
+            "timestamp":            datetime.now().isoformat(),
+            "rainfall_mm":          weather["rainfall_mm"],
+            "temp_c":               weather["temp_c"],
+            "condition":            weather["condition"],
+            "wind_kph":             weather["wind_kph"],
+            "humidity":             weather["humidity"],
+            "is_forecast":          weather["is_forecast"],
+            "forecast_for":         weather["forecast_for"],
+            "current_speed_kph":    traffic["current_speed_kph"],
+            "free_flow_speed_kph":  traffic["free_flow_speed_kph"],
+            "congestion_level":     traffic["congestion_level"],
+            "news_risk_count":      news["news_risk_count"],
+            "headlines":            news["headlines"],
+            "event_type":           event_type,
+            "disruption":           1 if event_type != "clear" else 0,
         }
 
         producer.send('highway-events', value=event)
-        print(f"Produced: {city} | {highway} | {event_type} | rain={weather['rainfall_mm']}mm")
+        forecast_tag = f"[FORECAST {forecast_date}]" if forecast_date else "[CURRENT]"
+        print(f"Produced: {city} | {highway} | {event_type} | rain={weather['rainfall_mm']}mm {forecast_tag}")
         time.sleep(0.3)
 
     producer.flush()
@@ -221,4 +268,6 @@ def produce_events():
 
 
 if __name__ == "__main__":
-    produce_events()
+    import sys
+    forecast_date = sys.argv[1] if len(sys.argv) > 1 else None
+    produce_events(forecast_date)
