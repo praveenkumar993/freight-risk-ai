@@ -12,7 +12,7 @@ import {
   ResponsiveContainer, AreaChart, Area
 } from "recharts";
 
-const API = "http://localhost:8000";
+const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const HIGHWAY_COORDS = {
   "NH-44":  [[28.61,77.21],[21.15,79.09],[17.39,78.49],[12.97,77.59],[12.52,78.21],[13.08,80.27]],
@@ -1338,7 +1338,7 @@ export default function App() {
             {/* Quick Questions */}
             {chatMsgs.length <= 1 && (
               <div style={{ padding:"0 14px 10px", display:"flex", flexWrap:"wrap", gap:5 }}>
-                {["What is my source & destination?","Is NH-44 safe today?","Monsoon disruptions?"].map(q => (
+                {["What is my source & destination?","Is NH-44 safe today?","Best route Hyderabad→Chennai","Monsoon disruptions?"].map(q => (
                   <button key={q} className="quick-q" onClick={() => setChatInput(q)} style={{
                     background:COLORS.card, border:`1px solid ${COLORS.border2}`, borderRadius:8,
                     padding:"5px 10px", color:COLORS.muted, cursor:"pointer",

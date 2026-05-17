@@ -1,0 +1,55 @@
+# Environment
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Database — don't commit live DB, only schema
+data/freight_risk.db
+
+# ML Models — too large for GitHub (use Git LFS or rebuild)
+models/*.pkl
+!models/.gitkeep
+
+# MLflow runs
+mlruns/
+
+# Logs
+*.log
+logs/
+
+# Airflow
+airflow/logs/
+airflow/airflow.db
+airflow/__pycache__/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+
+# Spark temp
+spark-warehouse/
+derby.log
+metastore_db/
