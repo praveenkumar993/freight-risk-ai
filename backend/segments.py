@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from datetime import datetime
 
@@ -51,7 +52,9 @@ HIGHWAY_SEGMENTS = [
 
 
 def get_city_weather():
-    conn = sqlite3.connect("data/freight_risk.db")
+    import os
+    _DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
+    conn = sqlite3.connect(_DB)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT city, rainfall_mm, temp_c, congestion_level,
@@ -176,7 +179,9 @@ def compute_segment_scores():
 
 
 def save_segment_scores(results):
-    conn = sqlite3.connect("data/freight_risk.db")
+    import os
+    _DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
+    conn = sqlite3.connect(_DB)
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS segment_scores")
     cursor.execute('''

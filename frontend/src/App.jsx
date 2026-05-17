@@ -12,7 +12,7 @@ import {
   ResponsiveContainer, AreaChart, Area
 } from "recharts";
 
-const API = "http://localhost:8000";
+const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const HIGHWAY_COORDS = {
   "NH-44":  [[28.61,77.21],[21.15,79.09],[17.39,78.49],[12.97,77.59],[12.52,78.21],[13.08,80.27]],

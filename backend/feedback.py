@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import pickle
 import pandas as pd
@@ -12,7 +13,9 @@ def submit_feedback(
 ):
     reported_disruption = 1 if actual_delay_hrs > 1.0 else 0
 
-    conn = sqlite3.connect("data/freight_risk.db")
+    import os
+    _DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
+    conn = sqlite3.connect(_DB)
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO user_feedback (

@@ -1,3 +1,4 @@
+import os
 import pickle
 import shap
 import pandas as pd
@@ -12,7 +13,9 @@ def load_model():
 
 
 def get_highway_features():
-    conn = sqlite3.connect("data/freight_risk.db")
+    import os
+    _DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
+    conn = sqlite3.connect(_DB)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT highway,
