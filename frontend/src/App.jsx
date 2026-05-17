@@ -12,7 +12,7 @@ import {
   ResponsiveContainer, AreaChart, Area
 } from "recharts";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API = "http://localhost:8000";
 
 const HIGHWAY_COORDS = {
   "NH-44":  [[28.61,77.21],[21.15,79.09],[17.39,78.49],[12.97,77.59],[12.52,78.21],[13.08,80.27]],
@@ -977,53 +977,59 @@ export default function App() {
               {/* Pie: Highway risk distribution */}
               <div style={{ background:COLORS.card, borderRadius:16, padding:20, border:`1px solid ${COLORS.border2}` }}>
                 <div style={{ fontSize:10, color:COLORS.muted, letterSpacing:2.5, marginBottom:16, textTransform:"uppercase" }}>Highway Risk Distribution</div>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie data={riskPieData} cx="50%" cy="50%" innerRadius={55} outerRadius={80}
-                      dataKey="value" stroke="none" paddingAngle={3}>
-                      {riskPieData.map((d,i) => (
-                        <Cell key={i} fill={d.color} style={{ filter:`drop-shadow(0 0 8px ${d.color}60)` }}/>
-                      ))}
-                    </Pie>
-                    <ReTooltip contentStyle={{ background:COLORS.card, border:`1px solid ${COLORS.border2}`, borderRadius:8, color:COLORS.text }}/>
-                    <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ color:COLORS.muted, fontSize:11 }}>{v}</span>}/>
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ width:"100%", height:200 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={riskPieData} cx="50%" cy="50%" innerRadius={55} outerRadius={80}
+                        dataKey="value" stroke="none" paddingAngle={3}>
+                        {riskPieData.map((d,i) => (
+                          <Cell key={i} fill={d.color} style={{ filter:`drop-shadow(0 0 8px ${d.color}60)` }}/>
+                        ))}
+                      </Pie>
+                      <ReTooltip contentStyle={{ background:COLORS.card, border:`1px solid ${COLORS.border2}`, borderRadius:8, color:COLORS.text }}/>
+                      <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ color:COLORS.muted, fontSize:11 }}>{v}</span>}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
 
               {/* Pie: Segment risk */}
               <div style={{ background:COLORS.card, borderRadius:16, padding:20, border:`1px solid ${COLORS.border2}` }}>
                 <div style={{ fontSize:10, color:COLORS.muted, letterSpacing:2.5, marginBottom:16, textTransform:"uppercase" }}>Segment Risk Breakdown</div>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie data={segPieData} cx="50%" cy="50%" outerRadius={80}
-                      dataKey="value" stroke="none" paddingAngle={2} label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`}
-                      labelLine={false}>
-                      {segPieData.map((d,i) => <Cell key={i} fill={d.color}/>)}
-                    </Pie>
-                    <ReTooltip contentStyle={{ background:COLORS.card, border:`1px solid ${COLORS.border2}`, borderRadius:8, color:COLORS.text }}/>
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ width:"100%", height:200 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={segPieData} cx="50%" cy="50%" outerRadius={80}
+                        dataKey="value" stroke="none" paddingAngle={2} label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`}
+                        labelLine={false}>
+                        {segPieData.map((d,i) => <Cell key={i} fill={d.color}/>)}
+                      </Pie>
+                      <ReTooltip contentStyle={{ background:COLORS.card, border:`1px solid ${COLORS.border2}`, borderRadius:8, color:COLORS.text }}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
 
               {/* Bar: Model accuracy */}
               <div style={{ background:COLORS.card, borderRadius:16, padding:20, border:`1px solid ${COLORS.border2}` }}>
                 <div style={{ fontSize:10, color:COLORS.muted, letterSpacing:2.5, marginBottom:16, textTransform:"uppercase" }}>Model Performance</div>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={[
-                    { name:"XGBoost", acc:78, f1:82, auc:86 },
-                    { name:"LightGBM", acc:78.5, f1:83, auc:87 },
-                    { name:"RandomForest", acc:77.9, f1:81, auc:85 },
-                  ]} margin={{ top:5, right:10, left:-20, bottom:5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={COLORS.dim}/>
-                    <XAxis dataKey="name" tick={{ fontSize:10, fill:COLORS.muted }}/>
-                    <YAxis tick={{ fontSize:10, fill:COLORS.muted }} domain={[70,90]}/>
-                    <ReTooltip contentStyle={{ background:COLORS.card, border:`1px solid ${COLORS.border2}`, borderRadius:8, color:COLORS.text }}/>
-                    <Bar dataKey="acc" fill={COLORS.primary} name="Accuracy" radius={[4,4,0,0]}/>
-                    <Bar dataKey="f1" fill={COLORS.low} name="F1 Score" radius={[4,4,0,0]}/>
-                    <Bar dataKey="auc" fill="#c77dff" name="AUC-ROC" radius={[4,4,0,0]}/>
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ width:"100%", height:200 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={[
+                      { name:"XGBoost", acc:78, f1:82, auc:86 },
+                      { name:"LightGBM", acc:78.5, f1:83, auc:87 },
+                      { name:"RandomForest", acc:77.9, f1:81, auc:85 },
+                    ]} margin={{ top:5, right:10, left:-20, bottom:5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={COLORS.dim}/>
+                      <XAxis dataKey="name" tick={{ fontSize:10, fill:COLORS.muted }}/>
+                      <YAxis tick={{ fontSize:10, fill:COLORS.muted }} domain={[70,90]}/>
+                      <ReTooltip contentStyle={{ background:COLORS.card, border:`1px solid ${COLORS.border2}`, borderRadius:8, color:COLORS.text }}/>
+                      <Bar dataKey="acc" fill={COLORS.primary} name="Accuracy" radius={[4,4,0,0]}/>
+                      <Bar dataKey="f1" fill={COLORS.low} name="F1 Score" radius={[4,4,0,0]}/>
+                      <Bar dataKey="auc" fill="#c77dff" name="AUC-ROC" radius={[4,4,0,0]}/>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
@@ -1050,19 +1056,21 @@ export default function App() {
               {/* Radar of risk dimensions */}
               <div style={{ background:COLORS.card, borderRadius:16, padding:20, border:`1px solid ${COLORS.border2}` }}>
                 <div style={{ fontSize:10, color:COLORS.muted, letterSpacing:2.5, marginBottom:16, textTransform:"uppercase" }}>Risk Dimension Radar</div>
-                <ResponsiveContainer width="100%" height={240}>
-                  <RadarChart data={[
-                    { factor:"Weather", score: highways.length ? (highways.reduce((a,h)=>(a+(h.risk_score||0)*0.3),0)/highways.length) : 40 },
-                    { factor:"Traffic", score: highways.length ? (highways.reduce((a,h)=>(a+(h.risk_score||0)*0.25),0)/highways.length) : 35 },
-                    { factor:"News Risk", score: highways.length ? (highways.reduce((a,h)=>(a+(h.risk_score||0)*0.2),0)/highways.length) : 30 },
-                    { factor:"Congestion", score: highways.length ? (highways.reduce((a,h)=>(a+(h.risk_score||0)*0.15),0)/highways.length) : 25 },
-                    { factor:"Rain Risk", score: highways.length ? (highways.reduce((a,h)=>(a+(h.risk_score||0)*0.1),0)/highways.length) : 20 },
-                  ]}>
-                    <PolarGrid stroke={COLORS.dim}/>
-                    <PolarAngleAxis dataKey="factor" tick={{ fontSize:11, fill:COLORS.muted }}/>
-                    <Radar dataKey="score" stroke={COLORS.primary} fill={COLORS.primary} fillOpacity={0.2}/>
-                  </RadarChart>
-                </ResponsiveContainer>
+                <div style={{ width:"100%", height:240 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={[
+                      { factor:"Weather", score: highways.length ? (highways.reduce((a,h)=>(a+(h.risk_score||0)*0.3),0)/highways.length) : 40 },
+                      { factor:"Traffic", score: highways.length ? (highways.reduce((a,h)=>(a+(h.risk_score||0)*0.25),0)/highways.length) : 35 },
+                      { factor:"News Risk", score: highways.length ? (highways.reduce((a,h)=>(a+(h.risk_score||0)*0.2),0)/highways.length) : 30 },
+                      { factor:"Congestion", score: highways.length ? (highways.reduce((a,h)=>(a+(h.risk_score||0)*0.15),0)/highways.length) : 25 },
+                      { factor:"Rain Risk", score: highways.length ? (highways.reduce((a,h)=>(a+(h.risk_score||0)*0.1),0)/highways.length) : 20 },
+                    ]}>
+                      <PolarGrid stroke={COLORS.dim}/>
+                      <PolarAngleAxis dataKey="factor" tick={{ fontSize:11, fill:COLORS.muted }}/>
+                      <Radar dataKey="score" stroke={COLORS.primary} fill={COLORS.primary} fillOpacity={0.2}/>
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
