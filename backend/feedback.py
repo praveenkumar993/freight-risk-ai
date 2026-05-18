@@ -4,7 +4,8 @@ import pickle
 import pandas as pd
 import numpy as np
 from datetime import datetime
-
+import os
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
 
 def submit_feedback(
     highway, origin, destination,
@@ -14,8 +15,7 @@ def submit_feedback(
     reported_disruption = 1 if actual_delay_hrs > 1.0 else 0
 
     import os
-    _DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
-    conn = sqlite3.connect(_DB)
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO user_feedback (
@@ -42,7 +42,7 @@ def submit_feedback(
 
 
 def get_feedback_as_training_data():
-    conn = sqlite3.connect("data/freight_risk.db")
+    conn = sqlite3.connect(DB_PATH)
     feedback_df = pd.read_sql_query(
         "SELECT * FROM user_feedback", conn
     )
@@ -89,7 +89,7 @@ def retrain_with_feedback():
     import mlflow
 
     # Load existing training data
-    conn = sqlite3.connect("data/freight_risk.db")
+    conn = sqlite3.connect(DB_PATH)
     conn.close()
 
     feedback_df = get_feedback_as_training_data()

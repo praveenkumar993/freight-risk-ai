@@ -3,7 +3,8 @@ import sqlite3
 import json
 from dotenv import load_dotenv
 from groq import Groq
-
+import os
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
 load_dotenv()
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -11,9 +12,7 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 def get_highway_risk_data():
     try:
-        import os
-        _DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
-        conn = sqlite3.connect(_DB)
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("""
             SELECT highway, risk_score, risk_level,
@@ -39,7 +38,7 @@ def get_highway_risk_data():
 
 def get_segment_data():
     try:
-        conn = sqlite3.connect("data/freight_risk.db")
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("""
             SELECT segment, highway, distance_km,

@@ -2,15 +2,13 @@ import os
 import requests
 from dotenv import load_dotenv
 
-from dbm import sqlite3
-
+import sqlite3
+import os
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
 load_dotenv()
 ORS_API_KEY = os.getenv("ORS_API_KEY")
 def get_risk_scores():
-    import sqlite3
-    import os
-    _DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
-    conn = sqlite3.connect(_DB)
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT highway, risk_score FROM highway_predictions")
     scores = {row[0]: row[1] for row in cursor.fetchall()}
@@ -71,8 +69,7 @@ HIGHWAY_GRAPH = {
 }
 
 def get_segment_scores():
-    import sqlite3
-    conn = sqlite3.connect("data/freight_risk.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT origin, destination, highway, risk_score

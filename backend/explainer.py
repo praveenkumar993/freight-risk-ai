@@ -5,7 +5,8 @@ import pandas as pd
 import sqlite3
 from datetime import datetime
 import numpy as np
-
+import os
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
 
 def load_model():
     with open("models/xgb_model_v3.pkl", "rb") as f:
@@ -13,9 +14,7 @@ def load_model():
 
 
 def get_highway_features():
-    import os
-    _DB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
-    conn = sqlite3.connect(_DB)
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT highway,
