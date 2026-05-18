@@ -1,27 +1,11 @@
 import os
 import sqlite3
 import json
-from dotenv import load_dotenv
-from groq import Groq
 
-load_dotenv()
-
-# Lazy client initialization to avoid startup errors
-_client = None
-
-def get_client():
-    global _client
-    if _client is None:
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError("GROQ_API_KEY not set in environment")
-        _client = Groq(api_key=api_key)
-    return _client
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
-load_dotenv()
-
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "data", "freight_risk.db"
+)
 
 def get_highway_risk_data():
     try:
@@ -36,16 +20,14 @@ def get_highway_risk_data():
         conn.close()
         return [
             {
-                "highway":        r[0],
-                "risk_score":     r[1],
-                "risk_level":     r[2],
-                "weather_summary":r[3],
-                "recommendation": r[4],
-                "updated_at":     r[5]
+                "highway": r[0], "risk_score": r[1],
+                "risk_level": r[2], "weather_summary": r[3],
+                "recommendation": r[4], "updated_at": r[5]
             }
             for r in rows
         ]
     except Exception as e:
+        print(f"DB error: {e}")
         return []
 
 
@@ -64,15 +46,14 @@ def get_segment_data():
         conn.close()
         return [
             {
-                "segment":    r[0],
-                "highway":    r[1],
-                "distance_km":r[2],
-                "risk_score": r[3],
+                "segment": r[0], "highway": r[1],
+                "distance_km": r[2], "risk_score": r[3],
                 "risk_level": r[4]
             }
             for r in rows
         ]
     except Exception as e:
+        print(f"DB error: {e}")
         return []
 
 
@@ -87,25 +68,33 @@ def get_route_recommendation(origin, destination):
 
 
 def run_agent(user_message: str) -> str:
+    # Import groq here to catch errors gracefully
+    try:
+        from groq import Groq
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            return "GROQ_API_KEY not configured on server."
+        client = Groq(api_key=api_key)
+    except Exception as e:
+        return f"AI service unavailable: {str(e)}"
+
     highway_data = get_highway_risk_data()
     segment_data = get_segment_data()
 
-    # Check if user is asking about a specific route
     cities = [
-        "Delhi", "Nagpur", "Hyderabad", "Bangalore", "Chennai",
-        "Krishnagiri", "Mumbai", "Pune", "Hubli", "Vijayawada",
-        "Visakhapatnam", "Nellore", "Guntur", "Rajahmundry",
-        "Kakinada", "Mysore", "Coimbatore", "Kochi", "Thrissur",
-        "Kozhikode", "Thiruvananthapuram", "Kurnool", "Solapur",
-        "Warangal", "Nizamabad", "Salem", "Vellore", "Madurai",
-        "Tiruchirappalli", "Tirupati", "Kadapa", "Mangalore",
-        "Davangere", "Belgaum"
+        "Delhi","Nagpur","Hyderabad","Bangalore","Chennai",
+        "Krishnagiri","Mumbai","Pune","Hubli","Vijayawada",
+        "Visakhapatnam","Nellore","Guntur","Rajahmundry",
+        "Kakinada","Mysore","Coimbatore","Kochi","Thrissur",
+        "Kozhikode","Thiruvananthapuram","Kurnool","Solapur",
+        "Warangal","Nizamabad","Salem","Vellore","Madurai",
+        "Tiruchirappalli","Tirupati","Kadapa","Mangalore",
+        "Davangere","Belgaum"
     ]
 
     msg_lower = user_message.lower()
     found_cities = [c for c in cities if c.lower() in msg_lower]
     route_info = None
-
     if len(found_cities) >= 2:
         route_info = get_route_recommendation(found_cities[0], found_cities[1])
 
@@ -119,13 +108,11 @@ Current Highway Risk Data:
 Top Risk Segments:
 {json.dumps(segment_data, indent=2)}
 """
-
     if route_info:
         context += f"""
 Route Analysis ({found_cities[0]} to {found_cities[1]}):
 {json.dumps(route_info, indent=2)}
 """
-
     context += """
 Guidelines:
 - Give specific, actionable advice
@@ -134,6 +121,7 @@ Guidelines:
 - Be concise - max 4-5 sentences
 - Always mention which highway is safest right now
 - Use Indian context (monsoon, NH numbers, city names)
+- Only answer freight/logistics questions
 """
 
     messages = [
@@ -141,14 +129,16 @@ Guidelines:
         {"role": "user", "content": user_message}
     ]
 
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=messages,
-        max_tokens=300,
-        temperature=0.3
-    )
-
-    return response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=messages,
+            max_tokens=300,
+            temperature=0.3
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Error getting AI response: {str(e)}"
 
 
 if __name__ == "__main__":
@@ -156,8 +146,6 @@ if __name__ == "__main__":
     questions = [
         "Is NH-44 safe today?",
         "Best route from Hyderabad to Chennai?",
-        "Any disruptions on South India highways?",
-        "Compare NH-44 and NH-48 risk levels"
     ]
     for q in questions:
         print(f"\nQ: {q}")
