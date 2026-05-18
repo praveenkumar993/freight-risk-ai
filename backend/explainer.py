@@ -8,8 +8,10 @@ import numpy as np
 import os
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
 
+MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models", "xgb_model_v3.pkl")
+
 def load_model():
-    with open("models/xgb_model_v3.pkl", "rb") as f:
+    with open(MODEL_PATH, "rb") as f:
         return pickle.load(f)
 
 
