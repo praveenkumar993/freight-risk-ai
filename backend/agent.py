@@ -3,7 +3,20 @@ import sqlite3
 import json
 from dotenv import load_dotenv
 from groq import Groq
-import os
+
+load_dotenv()
+
+# Lazy client initialization to avoid startup errors
+_client = None
+
+def get_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY not set in environment")
+        _client = Groq(api_key=api_key)
+    return _client
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "freight_risk.db")
 load_dotenv()
 
