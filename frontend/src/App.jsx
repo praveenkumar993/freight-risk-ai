@@ -12,7 +12,6 @@ import {
   ResponsiveContainer, AreaChart, Area
 } from "recharts";
 
-//const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const API = "https://freight-risk-ai.onrender.com";
 
 const HIGHWAY_COORDS = {
@@ -211,6 +210,8 @@ export default function App() {
   const fetchAll = async () => {
     try {
       setLoading(true);
+      await axios.get(`${API}/`).catch(() => {});
+      await new Promise(r => setTimeout(r, 1000));
       const [hw, seg] = await Promise.all([
         axios.get(`${API}/highway-risk`),
         axios.get(`${API}/segments`)
