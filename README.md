@@ -356,7 +356,7 @@ npm run dev
    - `ORS_API_KEY`
    - `NEWS_API_KEY`
    - `GROQ_API_KEY`
-6. Deploy → get your URL: `https://freight-risk-ai-backend.onrender.com`
+6. Deploy → get your URL: https://freight-risk-ai.onrender.com
 
 ### Frontend → Vercel (Free)
 
@@ -364,8 +364,8 @@ npm run dev
 2. Import your GitHub repo
 3. Set **Root Directory** to `frontend`
 4. Add environment variable:
-   - `VITE_API_URL` = your Render backend URL
-5. Deploy → get your URL: `https://freight-risk-ai.vercel.app`
+   - `VITE_API_URL` = https://freight-risk-ai.onrender.com
+5. Deploy → get your URL: https://freight-risk-ai.vercel.app/
 
 > **Important:** Update `API` constant in `frontend/src/App.jsx`:
 > ```javascript
@@ -491,15 +491,6 @@ NH-44 is 2,300km long. A single risk score for the whole highway is meaningless 
 > "LangGraph is a stateful multi-step agent framework. My agent has 4 nodes: fetch highway risk data → detect city pairs in the user's query → call Dijkstra router if cities found → send all context to Groq LLaMA-3.3-70B. It's not just LLM call — it's a reasoning pipeline that pulls live data before answering."
 
 ---
-
-## 📸 Screenshots
-
-> Add screenshots here after deployment:
-> - Dashboard with live highway map
-> - Analyze tab with gauge + route comparison
-> - Analytics tab with charts
-> - Pipeline architecture tab
-> - Chat widget conversation
 
 ---
 
